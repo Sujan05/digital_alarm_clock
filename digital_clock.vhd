@@ -1,22 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 07/27/2018 01:20:52 PM
--- Design Name: 
--- Module Name: digital_clock - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
@@ -24,28 +5,34 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity controller is port (
   S: in STD_LOGIC_VECTOR (4 downto 0);
-  DISPLAY0, DISPLAY1, DISPLAY2, DISPLAY3: out integer range 0 to 9 ;
+  --DISPLAY0, DISPLAY1, DISPLAY2, DISPLAY3: out integer range 0 to 9 ;
+  Display: out STD_LOGIC_VECTOR (6 downto 0));
   alarm: out STD_LOGIC;
   clk: in std_logic;
-  reset: in std_logic );
+  reset: in std_logic);
 end controller;
 
 architecture Behavioral of controller is
 
-  component Display60 is Port (
-    number : in integer range 0 to 59;
-    position1, position0: out integer range 0 to 9);
+  component seven_segment
+  Port (NUMBER: in STD_LOGIC_VECTOR (3 downto 0);
+        HEX0: out STD_LOGIC_VECTOR (6 downto 0));
   end component;
 
-  component Display24 is Port (
-    number : in integer range 0 to 23;
-    position1, position0: out integer range 0 to 9);
-  end component;
+  --component Display60 is Port (
+    --number : in integer range 0 to 59;
+  --  position1, position0: out integer range 0 to 9);
+  --end component;
+
+  --component Display24 is Port (
+    --number : in integer range 0 to 23;
+    --position1, position0: out integer range 0 to 9);
+  --end component;
 
   signal timer: std_logic_vector (13 downto 0);
   signal sectrigger : std_logic;
-  signal DISPLAY10, DISPLAY11, DISPLAY20, DISPLAY21: integer range 0 to 9;
-  signal DISPLAY30, DISPLAY31, DISPLAY40, DISPLAY41: integer range 0 to 9;
+  signal DISPLAY10, DISPLAY11, DISPLAY20, DISPLAY21: integer range 0 to 9; -- I may need to rethink about these varaibles
+  signal DISPLAY30, DISPLAY31, DISPLAY40, DISPLAY41: integer range 0 to 9; --I may need to rethink about these varaibles
   signal hours, whours: integer range 0 to 23;
   signal secs, mins, wmins: integer range 0 to 59;
   type state_type is (ntime, set_time, set_alarm);
@@ -53,9 +40,10 @@ architecture Behavioral of controller is
 
   begin
 
-    SECTIMER: process(clk,reset)
+    SECTIMER: process(clk,reset)   -- I feel this process is not required in my implementation
       variable timer_msb_to_zero : std_logic_vector(timer’RANGE);
     begin
+      -- A code of a second-trigger will be placed here
       if reset=’1’ then
         timer <= (others => ’0’);
       elsif clk’EVENT and clk=’1’ then
@@ -71,12 +59,15 @@ architecture Behavioral of controller is
     FSM: process (clk,reset,current_state,secs,mins,hours,wmins,whours, S)
       variable next_state: state_type;
     begin
+      -- Place your FSM-Code here
       if reset = ’1’ then
         hours <= 0; mins <= 0; secs <= 0;
         whours <= 0; wmins <= 0; alarm <= ’0’;
         current_state <= ntime;
-      elsif (clk’event and clk=’1’) then
-        if (not (current_state = set_time) and (sectrigger=’1’)) then
+      --elsif (clk’event and clk=’1’) then
+      elsif (sectrigger = ’1’) then
+        --if (not (current_state = set_time) and (sectrigger=’1’)) then
+        if (not (current_state = set_time)) then
           -- Zhle Uhr hoch
           if secs = 59 then
             secs <= 0;
@@ -94,18 +85,16 @@ architecture Behavioral of controller is
             secs <= secs+1;
           end if;
         end if;
-
         case current_state is
-when ntime =>
--- check if alarm is set
--- set next state
--- State Set_time
--- set minutes and hours with S(3) or S(4)
--- set next state
--- state set_alarm
--- set WMinute and WStunde with S(3) bzw. S(4)
--- set next state
-.......;
+          when ntime =>
+          -- check if alarm is set
+          -- set next state
+          -- State Set_time
+          -- set minutes and hours with S(3) or S(4)
+          -- set next state
+          -- state set_alarm
+          -- set WMinute and WStunde with S(3) bzw. S(4)
+          -- set next state
     end process FSM;
 
     -- MINUTE-DISPLAY (TIME)
@@ -139,6 +128,3 @@ when ntime =>
     end process Switch_Display;
 
 end Behavioral;
-
-
-
