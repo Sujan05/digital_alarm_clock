@@ -33,6 +33,7 @@ architecture Behavioral of controller is
   signal sectrigger : std_logic;
   signal DISPLAY10, DISPLAY11, DISPLAY20, DISPLAY21: integer range 0 to 9; -- I may need to rethink about these varaibles
   signal DISPLAY30, DISPLAY31, DISPLAY40, DISPLAY41: integer range 0 to 9; --I may need to rethink about these varaibles
+  signal DISPLAYHR, DISPLAYMIN: integer range 0 to 59;
   signal hours, whours: integer range 0 to 23;
   signal secs, mins, wmins: integer range 0 to 59;
   type state_type is (ntime, set_time, set_alarm);
@@ -86,9 +87,22 @@ architecture Behavioral of controller is
           end if;
         end if;
         case current_state is
-          when ntime =>
-          -- check if alarm is set
-          -- set next state
+          when ntime =>             -- check if alarm is set and set next state
+              if S(4) = '1' then
+                if hours = whours and mins = wmins then
+                  alarm < = '1';
+                end if;
+              end if;
+              DISPLAYHR <= hours;
+              DISPLAYMIN <= mins;
+              if S(0) = '1' and S(1) = '0' then
+                  current_state = set_time;
+                else if S(0) = '0' and S(1) = '1' then
+                  current_state = set_alarm;
+                else
+                  current_state = ntime;
+                end if;
+              end if;
           -- State Set_time
           -- set minutes and hours with S(3) or S(4)
           -- set next state
