@@ -19,21 +19,25 @@ architecture Behavioral of controller is
         HEX0: out STD_LOGIC_VECTOR (6 downto 0));
   end component;
 
-  --component Display60 is Port (
-    --number : in integer range 0 to 59;
-  --  position1, position0: out integer range 0 to 9);
-  --end component;
+  component two_number_split
+  Port (NUMBER: in STD_LOGIC_VECTOR (6 downto 0);
+        LEFT_DIGIT: out STD_LOGIC_VECTOR (3 downto 0);
+        RIGHT_DIGIT: out STD_LOGIC_VECTOR (3 downto 0));
+  end component;
 
-  --component Display24 is Port (
-    --number : in integer range 0 to 23;
-    --position1, position0: out integer range 0 to 9);
-  --end component;
+  component clock_module
+  Port (
+          clk: in STD_LOGIC;
+          output: out STD_LOGIC
+      );
+  end component;
 
   signal timer: std_logic_vector (13 downto 0);
   signal sectrigger : std_logic;
-  signal DISPLAY10, DISPLAY11, DISPLAY20, DISPLAY21: integer range 0 to 9; -- I may need to rethink about these varaibles
-  signal DISPLAY30, DISPLAY31, DISPLAY40, DISPLAY41: integer range 0 to 9; --I may need to rethink about these varaibles
+  signal min_left_out, min_right_out, hr_left_out, hr_right_out: std_logic_vector (3 downto 0);
+  signal display_min_left_out, display_min_right_out, display_hr_left_out, display_hr_right_out: std_logic_vector (6 downto 0);
   signal DISPLAYHR, DISPLAYMIN: integer range 0 to 59;
+  signal DISPLAYHR_vec, DISPLAYMIN_vec: std_logic_vector (6 downto 0);
   signal hours, whours: integer range 0 to 23;
   signal secs, mins, wmins: integer range 0 to 59;
   type state_type is (ntime, set_time, set_alarm);
@@ -96,33 +100,76 @@ architecture Behavioral of controller is
               DISPLAYHR <= hours;
               DISPLAYMIN <= mins;
               if S(0) = '1' and S(1) = '0' then
-                  current_state = set_time;
-                else if S(0) = '0' and S(1) = '1' then
-                  current_state = set_alarm;
+                  current_state <= set_time;
+              else if S(0) = '0' and S(1) = '1' then
+                  current_state <= set_alarm;
                 else
-                  current_state = ntime;
+                  current_state <= ntime;
                 end if;
               end if;
-          -- State Set_time
-          -- set minutes and hours with S(3) or S(4)
-          -- set next state
-          -- state set_alarm
-          -- set WMinute and WStunde with S(3) bzw. S(4)
-          -- set next state
+          -- State Set_time, set minutes and hours with S(3) or S(4), set next state
+          when set_time =>
+              if S(0) = '1' and S(2) = '1' then
+                if mins < 59 then
+                  mins <= mins + 1;
+                else mins < = 0;
+              end if;
+              if S(0) = '1' and S(3) = '1' then
+                if hours < 23 then
+                  mins <= mins + 1;
+                else mins < = 0;
+              end if;
+              DISPLAYHR <= hours;
+              DISPLAYMIN <= mins;
+              if S(0) = '1' and S(1) = '0' then
+                  current_state <= set_time;
+              else if S(0) = '0' and S(1) = '1' then
+                  current_state <= set_alarm;
+                else
+                  current_state <= ntime;
+                end if;
+              end if;
+          -- state set_alarm, set WMinute and WStunde with S(3) bzw. S(4), set next state
+          when set_alarm =>
+              if S(1) = '1' and S(2) = '1' then
+                if wmins < 59 then
+                  wmins <= wmins + 1;
+                else wmins < = 0;
+              end if;
+              if S(1) = '1' and S(3) = '1' then
+                if whours < 23 then
+                  wmins <= wmins + 1;
+                else wmins < = 0;
+              end if;
+              DISPLAYHR <= whours;
+              DISPLAYMIN <= wmins;
+              if S(0) = '1' and S(1) = '0' then
+                  current_state <= set_time;
+              else if S(0) = '0' and S(1) = '1' then
+                  current_state <= set_alarm;
+                else
+                  current_state <= ntime;
+                end if;
+              end if;
+          when others =>
+            DISPLAYHR <= hours;
+            DISPLAYMIN <= mins;
+            current_state <= ntime;
+        end case;
+      end if;
     end process FSM;
 
+    DISPLAYHR_vec <= std_logic_vector(to_unsigned(DISPLAYHR, DISPLAYHR_vec'length));
+    DISPLAYMIN_vec <= std_logic_vector(to_unsigned(DISPLAYMIN, DISPLAYMIN_vec'length));
     -- MINUTE-DISPLAY (TIME)
-    MIN_CONVERT: Display60
-      PORT MAP (number => ...., position1 => DISPLAY11, position0 => DISPLAY10);
+    MIN_CONVERT_STEP1: two_number_split port map(DISPLAYMIN_vec, min_left_out, min_right_out);
+    MIN_CONVERT_STEP21: seven_segment port map(min_left_out, display_min_left_out);
+    MIN_CONVERT_STEP22: seven_segment port map(min_right_out, display_min_right_out);
     -- HOURS-DISPLAY (TIME)
-    HR_CONVERT: Display24
-      PORT MAP (number => ....., position1 => DISPLAY21, position0 => DISPLAY20);
-    -- MINUTE-DISPLAY (ALARM-TIME)
-    WMIN_CONVERT: Display60
-      PORT MAP (number => ...., position1 => DISPLAY31, position0 => DISPLAY30);
-    -- HOURS-DISPLAY (ALARM-TIME)
-    WHR_CONVERT: Display24
-      PORT MAP (number => ..... , position1 => DISPLAY41, position0 => DISPLAY40);
+    HR_CONVERT_STEP1: two_number_split port map(DISPLAYHR_vec, hr_left_out, hr_right_out);
+    HR_CONVERT_STEP21: seven_segment port map(hr_left_out, display_hr_left_out);
+    HR_CONVERT_STEP22: seven_segment port map(hr_right_out, display_hr_right_out);
+
 
     -- Describes how to set the DISPLAY-Variables
     Switch_Display: process (S, DISPLAY10, DISPLAY11, DISPLAY20, DISPLAY21, DISPLAY30,
