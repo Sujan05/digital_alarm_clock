@@ -8,8 +8,9 @@ entity controller is port (
   --DISPLAY0, DISPLAY1, DISPLAY2, DISPLAY3: out integer range 0 to 9 ;
   Display: out STD_LOGIC_VECTOR (6 downto 0));
   alarm: out STD_LOGIC;
-  clk: in std_logic;
+  clk_fpga: in std_logic;
   reset: in std_logic);
+  ANODE: out STD_LOGIC_VECTOR (7 downto 0);
 end controller;
 
 architecture Behavioral of controller is
@@ -34,16 +35,20 @@ architecture Behavioral of controller is
 
   signal timer: std_logic_vector (13 downto 0);
   signal sectrigger : std_logic;
+  SIGNAL clk: STD_LOGIC;
   signal min_left_out, min_right_out, hr_left_out, hr_right_out: std_logic_vector (3 downto 0);
   signal display_min_left_out, display_min_right_out, display_hr_left_out, display_hr_right_out: std_logic_vector (6 downto 0);
   signal DISPLAYHR, DISPLAYMIN: integer range 0 to 59;
   signal DISPLAYHR_vec, DISPLAYMIN_vec: std_logic_vector (6 downto 0);
+  SIGNAL digit_anode : STD_LOGIC_VECTOR(7 downto 0);
   signal hours, whours: integer range 0 to 23;
   signal secs, mins, wmins: integer range 0 to 59;
   type state_type is (ntime, set_time, set_alarm);
   signal current_state: state_type;
 
   begin
+
+    clock_generation: clock_module port map(clk_fpga, clk);
 
     SECTIMER: process(clk,reset)   -- I feel this process is not required in my implementation
       variable timer_msb_to_zero : std_logic_vector(timer’RANGE);
@@ -172,20 +177,29 @@ architecture Behavioral of controller is
 
 
     -- Describes how to set the DISPLAY-Variables
-    Switch_Display: process (S, DISPLAY10, DISPLAY11, DISPLAY20, DISPLAY21, DISPLAY30,
-        DISPLAY31, DISPLAY40, DISPLAY41 ) is
+    Switch_Display: process (clk) is
+      variable counter: integer:= 0;
         begin
-          if current_state /= set_alarm then
-            DISPLAY0 <= DISPLAY10 ;
-            DISPLAY1 <= DISPLAY11;
-            DISPLAY2 <= DISPLAY20 ;
-            DISPLAY3 <= DISPLAY21 ;
+          if counter = 3 then
+            counter <= 0;
           else
-            DISPLAY0 <= DISPLAY30;
-            DISPLAY1 <= DISPLAY31;
-            DISPLAY2 <= DISPLAY40;
-            DISPLAY3 <= DISPLAY41;
+            counter <= couinter + 1;
           end if;
+          case counter is
+            when 0 =>
+              Display <= display_hr_left_out;
+              digit_anode <= "00000001";
+            when 1 =>
+              Display <= display_hr_right_out;
+              digit_anode <= "00000010";
+            when 2 =>
+              Display <= display_min_left_out;
+              digit_anode <= "00000100";
+            when 3 =>
+              Display <= display_min_right_out;
+              digit_anode <= "00001000";
+          end case;
+          ANODE <= not digit_anode;
     end process Switch_Display;
 
 end Behavioral;
